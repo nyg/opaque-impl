@@ -45,6 +45,25 @@ def ecp2b(p):
     x, y = p.xy()
     return i2b(int(x)) + i2b(int(y))
 
+def recv_json(connection):
+    data = b''
+    while True:
+        d = connection.recv(1024)
+        if not d:
+            continue
+        try:
+            data += d
+            return json.loads(data)
+        except:
+            None
+
+def send(sock, dict):
+    sock.sendall(json.dumps(dict).encode())
+
+def ecp2j(ecp, name):
+    x, y = ecp.xy()
+    return { name + '_x': int(x), name + '_y': int(y) }
+
 def h(m):
     """
     The H function (SHA-256)
