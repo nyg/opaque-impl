@@ -1,8 +1,4 @@
-#
-# https://pymotw.com/3/socket/tcp.html
-
 import socket
-import sys
 import json
 import base64
 
@@ -19,46 +15,37 @@ sock.bind(server_address)
 # Listen for incoming connections
 sock.listen(1)
 
+# High-tech database, do not turn off the server!!1
 db = {}
 
 def register(data):
 
     # choose random key for OPRF (different for each user)
-    k_u = Integer(Fn.random_element())
-    v_u = k_u * G
+    k_s = Integer(Fn.random_element())
 
     # choose private and public key
-    prv_s = Integer(Fn.random_element())
-    pub_s = prv_s * G
+    p_s = Integer(Fn.random_element())
+    P_s = p_s * G
 
     # compute beta
-    alpha = E(data['alpha_x'], data['alpha_y'])
-    beta = k_u * alpha
+    alpha = j2ecp(data, E, 'alpha')
+    beta = k_s * alpha
 
     # send v_u and beta to user
-    bx, by = beta.xy()
-    vx, vy = v_u.xy()
-    px, py = pub_s.xy()
-    connection.sendall(json.dumps({
-        'beta_x': int(bx),
-        'beta_y': int(by),
-        'v_u_x': int(vx),
-        'v_u_y': int(vy),
-        'P_s_x': int(px),
-        'P_s_y': int(py)
-    }).encode())
+    data = ecp2j(beta, 'beta')
+    data.update(ecp2j(P_s, 'P_s'))
+    send(connection, data)
 
+    # receive c and P_u from user
     data = recv_json(connection)
-    print(data)
-
     P_u = E(data['P_u_x'], data['P_u_y'])
     c = data['c']
 
     return {
-        'c' : c,
-        'p_s': prv_s, 'P_s': pub_s,
+        'k_s': k_s,
+        'p_s': p_s, 'P_s': P_s,
         'P_u': P_u,
-        'k_u': k_u, 'v_u': v_u
+        'c' : c
     }
 
 def login(data):
@@ -75,7 +62,7 @@ def login(data):
     # choose x_s
     x_s = Integer(Fn.random_element())
 
-    k_s = db[sid]['k_u']
+    k_s = db[sid]['k_s']
     p_s = db[sid]['p_s']
     P_s = db[sid]['P_s']
     P_u = db[sid]['P_u']

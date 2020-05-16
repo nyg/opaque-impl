@@ -97,24 +97,34 @@ def hp(m):
 
 def auth_enc(key, message):
 
-    # pad message with 0 as described in 3.1.1.
-    message += b'\x00' * 16
-    #while len(message) % 16 != 0:
-    #    message += b'\x00'
+    # Pad the message with 0x80 and 16 * 0x00 and then as many 0x00 needed for
+    # length of the message to be a multiple of 128 bits (AES block size, as
+    # we are using AES-GCM).
+    # This ensures the last block is only 0, as described in 3.1.1 of the RFC.
+    message += b'\x80' + b'\x00' * 16
+    while len(message) % 16 != 0:
+        message += b'\x00'
 
-    # iv should be 0 according to RFC
-    iv = b'\x00' * 12  # os.urandom(12)
+    # IV should be 0 according to RFC…
+    #
+    iv = b'\x00' * 12
 
-    # return iv and cipher
     return AESGCM(key).encrypt(iv, message, None)
 
 def auth_dec(key, cipher):
 
-    # iv should be 0 according to RFC
-    iv = b'\x00' * 12  # os.urandom(12)
+    # IV is 0 according to RFC
+    iv = b'\x00' * 12
 
-    # return message after removing the last 16 "0" bytes
-    return AESGCM(key).decrypt(iv, cipher, None)[:-16]
+    # decrypt and remove the last 0 block
+    message = AESGCM(key).decrypt(iv, cipher, None)[:-16]
+
+    # remove all 0 bytes until we reach the 0x80 byte
+    while message[-1] == 0x00:
+        message = message[:-1]
+
+    # return the message after removing the 0x80 byte
+    return message[:-1]
 
 def key_ex_s(p_s, x_s, P_u, X_u, X_s, id_s, id_u, ssid):
 

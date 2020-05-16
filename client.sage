@@ -1,9 +1,5 @@
-#
-# https://pymotw.com/3/socket/tcp.html
-
 import argparse
 import socket
-import sys
 import json
 import base64
 import pickle
@@ -35,25 +31,21 @@ def register_user(sock):
     r = Integer(Fn.random_element())
 
     # compute alpha
-    alpha = hp(pw) + r * G
-
-    # tell server we want to register
-    #sock.sendall(json.dumps({'op':'register'}).encode())
+    alpha = hp(pw) * r
 
     # send alpha to server
     x, y = alpha.xy()
     send(sock, {'op': 'register', 'alpha_x': int(x), 'alpha_y': int(y)})
 
-    # receive beta, v_u and pub_s from server
+    # receive beta and pub_s from server
     data = sock.recv(1024)
     data = json.loads(data)
 
     beta = E(data['beta_x'], data['beta_y'])
-    v_u = E(data['v_u_x'], data['v_u_y'])
     pub_s = E(data['P_s_x'], data['P_s_y'])
 
-    # compute rw TODO
-    rw = h(pw + ecp2b(beta + -r * v_u))
+    # compute rw
+    rw = h(pw + ecp2b(beta * r.inverse_mod(n)))
 
     # encrypt and authenticate prv_u, pub_u and pub_s
     c_data = pickle.dumps((prv_u, pub_u, pub_s))
