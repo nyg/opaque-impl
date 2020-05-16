@@ -4,7 +4,9 @@
 import socket
 import sys
 import json
-from common_opq import *
+import base64
+
+from common import *
 
 # Create a TCP/IP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -16,18 +18,6 @@ sock.bind(server_address)
 
 # Listen for incoming connections
 sock.listen(1)
-
-def recv_json(connection):
-    data = b''
-    while True:
-        d = connection.recv(1024)
-        if not d:
-            continue
-        try:
-            data += d
-            return json.loads(data)
-        except:
-            None
 
 db = {}
 
@@ -84,12 +74,49 @@ while True:
                 db['usr1'] = {
                     'c' : c,
                     'p_s': prv_s, 'P_s': pub_s,
-                    'pub_u': P_u,
+                    'P_u': P_u,
                     'k_u': k_u, 'v_u': v_u
                 }
                 
             elif data['op'] == 'login':
                 
+                alpha = data['alpha']
+                X_u = data['X_u']
+                
+                # check alpha belongs to the curve
+                x, y = alpha.xy()
+                if not E.is_on_curve(x, y):
+                    abort()
+                    
+                # choose x_s
+                x_s = Integer(Fn.random_element())
+
+                # compute beta and and X_s
+                beta = alpha * k_s
+                X_s = x_s * G
+                
+                # compute ssid', K, SK and A_s
+                ssidp = h(sid + ssid + ecp2b(alpha))
+                K = key_ex_s(prv_s, x_s, pub_u, X_u, X_s, id_s, id_u, ssidp)
+                SK = f(K, b'\x00' + ssidp)
+                A_s = f(K, b'\x01' + ssidp)
+                
+                # send beta, X_s, c and A_s
+                data = ecp2j(beta, 'beta')
+                data.update(ecp2j(X_s, 'X_s'))
+                data.update({
+                    'c': base64.b64encode(c).decode(),
+                    'A_s': base64.b64encode(c).decode()
+                })
+                send(sock, data)
+                
+                data = recv_json(connection)
+                A_u = base64.b64decode(data['c'].encode())
+                
+                # compute A_u and verify it equals the one received from the user
+                if A_u != f(K, b'\x02' + ssidp):
+                    abort()
+
 
     finally:
         # Clean up the connection

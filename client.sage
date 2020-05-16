@@ -2,12 +2,13 @@
 # https://pymotw.com/3/socket/tcp.html
 
 import argparse
-import json
 import socket
 import sys
-import pickle
+import json
 import base64
-from common_opq import *
+import pickle
+
+from common import *
 
 # Define available operations
 parser = argparse.ArgumentParser()
@@ -20,13 +21,6 @@ def init_socket():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(server_address)
     return sock
-
-def send(sock, dict):
-    sock.sendall(json.dumps(dict).encode())
-
-def ecp2j(ecp, name):
-    x, y = ecp.xy()
-    return { name + '_x': int(x), name + '_y': int(y) }
 
 def register_user():
     
@@ -95,8 +89,39 @@ def login():
     data.update(ecp2j(alpha, 'alpha'))
     data.update(ecp2j(X_u, 'X_u'))
     send(sock, data)
-
     
+    # receive beta, X_s, c and A_s
+    data = recv_json(sock)
+    beta = data['beta']
+    X_s = data['X_s']
+    c = base64.b64decode(data['c'].encode())
+    A_s = base64.b64decode(data[''].encode())
+    
+    # check beta belongs to the curve
+    x, y = alpha.xy()
+    if not E.is_on_curve(x, y):
+        abort()
+
+    # compute rw and decrypt c
+    rw = h(pw + ecp2b(beta * r.inverse_mod(n)))
+    prv_u, pub_u, pub_s = pickle.loads(auth_dec(rw, c))
+
+    # compute ssid', K, SK
+    ssidp = h(sid + ssid + ecp2b(alpha))
+    K = key_ex_u(prv_u, x_u, pub_s, X_s, X_u, id_s, id_u, ssidp)
+    SK = f(K, b'\x00' + ssidp)
+
+    # compute A_s and verify it equals the one received from the server
+    if A_s != f(K, b'\x01' + ssidp):
+        abort()
+
+    # compute A_u
+    A_u = f(K, b'\x02' + ssidp)
+    
+    # sending A_u to server
+    send(sock, {'A_u': base64.b64encode(A_u).decode()})
+
+
 try:
     if args.operation == 'register':
         register_user()
