@@ -122,6 +122,11 @@ try:
         SK = login(sock)
         print(SK)
 
+    print('Ok')
+
+except:
+    print('Error')
+
 finally:
     print('closing socket')
     sock.close()

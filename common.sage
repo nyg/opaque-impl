@@ -22,7 +22,7 @@ G = E(x, y)
 n = 0x01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFA51868783BF2F966B7FCC0148F709A5D03BB5C9B8899C47AEBB6FB71E91386409
 #(n * G).is_zero()  # must be true
 
-Fn = FiniteField(n)
+Fn = FiniteField(p)
 
 #
 # Hardcoded values to simplify this current implementation.
@@ -106,7 +106,6 @@ def auth_enc(key, message):
         message += b'\x00'
 
     # IV should be 0 according to RFC…
-    #
     iv = b'\x00' * 12
 
     return AESGCM(key).encrypt(iv, message, None)

@@ -109,7 +109,6 @@ while True:
             continue
 
         data = json.loads(data)
-        print('received {!r}'.format(data))
 
         if (data['op'] == 'register'):
             db[sid] = register(data)
@@ -117,6 +116,9 @@ while True:
         elif data['op'] == 'login':
             SK = login(data)
             print(SK)
+
+    except:
+        print('Error')
 
     finally:
         connection.close()
