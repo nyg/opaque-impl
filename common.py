@@ -7,13 +7,14 @@ _sage_const_2 = Integer(2); _sage_const_521 = Integer(521); _sage_const_1 = Inte
 import os
 import pickle
 import hashlib
+import json
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, hmac
 
 #
-# Public elliptic curve (sec512r1)
+# Public elliptic curve (sec512r1).
 
 p = _sage_const_2  ** _sage_const_521  - _sage_const_1 
 a = _sage_const_0x01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC 
@@ -30,7 +31,16 @@ n = _sage_const_0x01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 Fn = FiniteField(n)
 
 #
-# Common functions
+# Hardcoded values to simplify this current implementation.
+
+sid  = b'123'                     # user id
+id_u = b'bob'                     # username
+id_s = b'very-secure-crypto.com'  # server "id"
+ssid = b'12345'                   # session id
+
+
+#
+# Helper functions.
 
 def i2b(i):
     """
@@ -51,6 +61,16 @@ def ecp2b(p):
     x, y = p.xy()
     return i2b(int(x)) + i2b(int(y))
 
+def ecp2j(ecp, name):
+    x, y = ecp.xy()
+    return { name + '_x': int(x), name + '_y': int(y) }
+
+def j2ecp(j, ec, name):
+    return ec(j[name + '_x'], j[name + '_y'])
+
+#
+# Send, receive helper functions.
+
 def recv_json(connection):
     data = b''
     while True:
@@ -66,9 +86,8 @@ def recv_json(connection):
 def send(sock, dict):
     sock.sendall(json.dumps(dict).encode())
 
-def ecp2j(ecp, name):
-    x, y = ecp.xy()
-    return { name + '_x': int(x), name + '_y': int(y) }
+#
+# OPAQUE functions.
 
 def h(m):
     """
@@ -83,38 +102,38 @@ def hp(m):
     return int.from_bytes(h(m), byteorder=sys.byteorder) * G
 
 def auth_enc(key, message):
-    
+
     # pad message with 0 as described in 3.1.1.
     message += b'\x00' * _sage_const_16 
     #while len(message) % 16 != 0:
     #    message += b'\x00'
-    
+
     # iv should be 0 according to RFC
     iv = b'\x00' * _sage_const_12   # os.urandom(12)
-    
+
     # return iv and cipher
     return AESGCM(key).encrypt(iv, message, None)
 
 def auth_dec(key, cipher):
-    
+
     # iv should be 0 according to RFC
     iv = b'\x00' * _sage_const_12   # os.urandom(12)
-    
+
     # return message after removing the last 16 "0" bytes
     return AESGCM(key).decrypt(iv, cipher, None)[:-_sage_const_16 ]
 
 def key_ex_s(p_s, x_s, P_u, X_u, X_s, id_s, id_u, ssid):
-    
+
     e_u = b2i(h(ecp2b(X_u) + id_s + ssid)) % n
     e_s = b2i(h(ecp2b(X_s) + id_u + ssid)) % n
-     
+
     return h(ecp2b((X_u + e_u * P_u) * (x_s + e_s * p_s)))
 
 def key_ex_u(p_u, x_u, P_s, X_s, X_u, id_s, id_u, ssid):
-    
+
     e_u = b2i(h(ecp2b(X_u) + id_s + ssid)) % n
     e_s = b2i(h(ecp2b(X_s) + id_u + ssid)) % n
-    
+
     return h(ecp2b((X_s + e_s * P_s) * (x_u + e_u * p_u)))
 
 def f(key, message):

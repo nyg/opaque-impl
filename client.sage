@@ -22,45 +22,43 @@ def init_socket():
     sock.connect(server_address)
     return sock
 
-def register_user():
-    
-    sock = init_socket()
-    
+def register_user(sock):
+
     # TODO: ask user for pwd
     pw = b'pwd123'
-    
+
     # choose a private and a public key
     prv_u = Integer(Fn.random_element())
     pub_u = prv_u * G
-    
+
     # choose random r
     r = Integer(Fn.random_element())
 
     # compute alpha
     alpha = hp(pw) + r * G
-    
+
     # tell server we want to register
     #sock.sendall(json.dumps({'op':'register'}).encode())
-    
+
     # send alpha to server
     x, y = alpha.xy()
     send(sock, {'op': 'register', 'alpha_x': int(x), 'alpha_y': int(y)})
-    
+
     # receive beta, v_u and pub_s from server
     data = sock.recv(1024)
     data = json.loads(data)
-    
+
     beta = E(data['beta_x'], data['beta_y'])
     v_u = E(data['v_u_x'], data['v_u_y'])
     pub_s = E(data['P_s_x'], data['P_s_y'])
-    
+
     # compute rw TODO
     rw = h(pw + ecp2b(beta + -r * v_u))
-    
+
     # encrypt and authenticate prv_u, pub_u and pub_s
     c_data = pickle.dumps((prv_u, pub_u, pub_s))
     c = auth_enc(rw, c_data)
-    
+
     # send c and pub_u to the server
     x, y = pub_u.xy()
     send(sock, {
@@ -69,9 +67,7 @@ def register_user():
         'P_u_y': int(y)
     })
 
-def login():
-    
-    sock = init_socket()
+def login(sock):
 
     # TODO: ask user for pwd
     pw = b'pwd123'
@@ -83,22 +79,22 @@ def login():
     # compute alpha and X_u
     alpha = hp(pw) * r
     X_u = x_u * G
-    
+
     # sending alpha and X_u to the server
     data = {'op': 'login'}
     data.update(ecp2j(alpha, 'alpha'))
     data.update(ecp2j(X_u, 'X_u'))
     send(sock, data)
-    
+
     # receive beta, X_s, c and A_s
     data = recv_json(sock)
-    beta = data['beta']
-    X_s = data['X_s']
+    beta = j2ecp(data, E, 'beta')
+    X_s = j2ecp(data, E, 'X_s')
     c = base64.b64decode(data['c'].encode())
-    A_s = base64.b64decode(data[''].encode())
-    
+    A_s = base64.b64decode(data['A_s'].encode())
+
     # check beta belongs to the curve
-    x, y = alpha.xy()
+    x, y = beta.xy()
     if not E.is_on_curve(x, y):
         abort()
 
@@ -117,17 +113,23 @@ def login():
 
     # compute A_u
     A_u = f(K, b'\x02' + ssidp)
-    
+
     # sending A_u to server
     send(sock, {'A_u': base64.b64encode(A_u).decode()})
 
+    return SK
+
 
 try:
+    sock = init_socket()
+
     if args.operation == 'register':
-        register_user()
+        register_user(sock)
+
     elif args.operation == 'login':
-        login()
+        SK = login(sock)
+        print(SK)
 
 finally:
     print('closing socket')
-    #sock.close()
+    sock.close()
