@@ -91,9 +91,9 @@ def send(sock, dict):
 
 def h(m):
     """
-    The H function (SHA-256)
+    The H function (SHA-512)
     """
-    return hashlib.sha256(m).digest()
+    return hashlib.sha512(m).digest()
 
 def hp(m):
     """
@@ -112,7 +112,6 @@ def auth_enc(key, message):
         message += b'\x00'
 
     # IV should be 0 according to RFC…
-    #
     iv = b'\x00' * _sage_const_12 
 
     return AESGCM(key).encrypt(iv, message, None)
@@ -147,7 +146,7 @@ def key_ex_u(p_u, x_u, P_s, X_s, X_u, id_s, id_u, ssid):
     return h(ecp2b((X_s + e_s * P_s) * (x_u + e_u * p_u)))
 
 def f(key, message):
-    h = hmac.HMAC(key, hashes.SHA256(), backend=default_backend())
+    h = hmac.HMAC(key, hashes.SHA512(), backend=default_backend())
     h.update(message)
     return h.finalize()
 

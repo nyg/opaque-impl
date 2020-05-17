@@ -22,7 +22,7 @@ G = E(x, y)
 n = 0x01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFA51868783BF2F966B7FCC0148F709A5D03BB5C9B8899C47AEBB6FB71E91386409
 #(n * G).is_zero()  # must be true
 
-Fn = FiniteField(p)
+Fn = FiniteField(n)
 
 #
 # Hardcoded values to simplify this current implementation.
@@ -85,9 +85,9 @@ def send(sock, dict):
 
 def h(m):
     """
-    The H function (SHA-256)
+    The H function (SHA-512)
     """
-    return hashlib.sha256(m).digest()
+    return hashlib.sha512(m).digest()
 
 def hp(m):
     """
@@ -140,7 +140,7 @@ def key_ex_u(p_u, x_u, P_s, X_s, X_u, id_s, id_u, ssid):
     return h(ecp2b((X_s + e_s * P_s) * (x_u + e_u * p_u)))
 
 def f(key, message):
-    h = hmac.HMAC(key, hashes.SHA256(), backend=default_backend())
+    h = hmac.HMAC(key, hashes.SHA512(), backend=default_backend())
     h.update(message)
     return h.finalize()
 

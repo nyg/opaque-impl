@@ -13,7 +13,7 @@ args = parser.parse_args()
 
 def init_socket():
     server_address = ('localhost', 10001)
-    print('connecting to {} port {}'.format(*server_address))
+    print('Connecting to {} port {}…'.format(*server_address))
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(server_address)
     return sock
@@ -45,7 +45,7 @@ def register_user(sock):
     pub_s = E(data['P_s_x'], data['P_s_y'])
 
     # compute rw
-    rw = h(pw + ecp2b(beta * r.inverse_mod(n)))
+    rw = h(pw + ecp2b(beta * r.inverse_mod(n)))[:32]
 
     # encrypt and authenticate prv_u, pub_u and pub_s
     c_data = pickle.dumps((prv_u, pub_u, pub_s))
@@ -91,7 +91,7 @@ def login(sock):
         abort()
 
     # compute rw and decrypt c
-    rw = h(pw + ecp2b(beta * r.inverse_mod(n)))
+    rw = h(pw + ecp2b(beta * r.inverse_mod(n)))[:32]
     prv_u, pub_u, pub_s = pickle.loads(auth_dec(rw, c))
 
     # compute ssid', K, SK
@@ -124,9 +124,10 @@ try:
 
     print('Ok')
 
-except:
+except e:
+    print(e)
     print('Error')
 
 finally:
-    print('closing socket')
+    print('Closing socket.')
     sock.close()
