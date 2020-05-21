@@ -19,13 +19,13 @@ OPAQUE-related code is located in files inside the `opaque` folder. The Sage scr
 
 This means that in both cases, we unpickle only data we trust (unless an attacker managed to get an access to the server or to the `rw` key…).
 
-### Limitation
-
-This PoC can register only one user…
-
 ### JSON
 
 JSON is used to transmit data between the client and the server, and as mentioned in the Python doc, *unlike pickle, deserializing untrusted JSON does not in itself create an arbitrary code execution vulnerability*.
+
+### Limitation
+
+This PoC can register only one user…
 
 ## Execution
 
