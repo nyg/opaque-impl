@@ -22,8 +22,8 @@ def init_socket():
 try:
     sock = init_socket()
 
-    def send(**kwargs):
-        return send_json(sock, **kwargs)
+    def send(**data):
+        return send_json(sock, **data)
 
     def recv():
         return recv_json(sock)
@@ -39,7 +39,7 @@ try:
             print(SK.hex())  # debug only
 
 except:
-    #traceback.print_exc()  # debug only
+    traceback.print_exc()  # debug only
     print('Error')
 
 else:

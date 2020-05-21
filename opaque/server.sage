@@ -34,8 +34,7 @@ def login(send, recv, db, data):
     alpha = j2ecp(data, 'alpha')
 
     # check alpha belongs to the curve
-    x, y = alpha.xy()
-    if not E.is_on_curve(x, y):
+    if not on_curve(alpha):
         return (None, sid, ssid)
 
     X_u = j2ecp(data, 'X_u')
@@ -53,6 +52,10 @@ def login(send, recv, db, data):
     # compute beta and and X_s
     beta = alpha * k_s
     X_s = x_s * G
+
+    # check X_u, P_u, X_s and P_s are all on the curve
+    if not on_curve(X_u, P_u, X_s, P_s):
+        return (None, sid, ssid)
 
     # compute ssid', K, SK and A_s
     ssidp = h(sid, ssid, alpha)

@@ -43,8 +43,8 @@ while True:
     print('Waiting for a connection…')
     connection, client_address = sock.accept()
 
-    def send(**kwargs):
-        return send_json(connection, **kwargs)
+    def send(**data):
+        return send_json(connection, **data)
 
     def recv():
         return recv_json(connection)
@@ -67,7 +67,7 @@ while True:
                 print(SK.hex())  # debug only
 
     except:
-        #traceback.print_exc()  # debug only
+        traceback.print_exc()  # debug only
         print('Error')
 
     else:

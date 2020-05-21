@@ -58,8 +58,7 @@ def login(send, recv):
     A_s = j2b(data['A_s'])
 
     # check beta belongs to the curve
-    x, y = beta.xy()
-    if not E.is_on_curve(x, y):
+    if not on_curve(beta):
         return (None, sid, ssid)
 
     # compute rw and decrypt c, crop rw to 256 bits
@@ -69,6 +68,10 @@ def login(send, recv):
         # decrypt and authentify c, extract p_u, P_u and P_s
         p_u, P_u, P_s = pickle.loads(auth_dec(rw, c))
     except InvalidTag:
+        return (None, sid, ssid)
+
+    # check X_u, P_u, X_s and P_s are all on the curve
+    if not on_curve(X_u, P_u, X_s, P_s):
         return (None, sid, ssid)
 
     # compute ssid', K, SK

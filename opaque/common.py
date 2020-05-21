@@ -44,11 +44,11 @@ if not (n * G).is_zero():
 #
 # OPAQUE functions.
 
-def h(*args):
+def h(*data):
     """
     The H function (SHA-512).
     """
-    return hashlib.sha512(to_bytes(*args)).digest()
+    return hashlib.sha512(to_bytes(*data)).digest()
 
 def hp(m):
     """
@@ -92,6 +92,16 @@ def auth_dec(key, cipher):
     # return the message after removing the 0x80 byte
     return message[:-_sage_const_1 ]
 
+def on_curve(*points):
+    """
+    Check if the given points are all on the E curve.
+    """
+    res = True
+    for p in points:
+        x, y = p.xy()
+        res = res and E.is_on_curve(x, y)
+    return res
+
 def key_ex_e(P, id, ssid):
     return b2i(h(P, id, ssid)) % n
 
@@ -111,12 +121,12 @@ def key_ex_u(p_u, x_u, P_s, X_s, X_u, id_s, id_u, ssid):
     e_s = key_ex_e(X_s, id_u, ssid)
     return h((X_s + e_s * P_s) * (x_u + e_u * p_u))
 
-def f(key, *args):
+def f(key, *message):
     """
     Pseudorandom function f (HMAC-SHA512).
     """
     h = hmac.HMAC(key, hashes.SHA512(), backend=default_backend())
-    h.update(to_bytes(*args))
+    h.update(to_bytes(*message))
     return h.finalize()
 
 
@@ -141,13 +151,13 @@ def recv_json(sock):
         except:
             None
 
-def send_json(sock, **kwargs):
+def send_json(sock, **data):
     """
     Send over the socket the keyword parameters as a JSON object.
     """
 
     dict = {}
-    for name, value in kwargs.items():
+    for name, value in data.items():
 
         vtype = type(value)
         if vtype is bytes:
@@ -209,26 +219,26 @@ def j2b(j):
     """
     return base64.b64decode(j.encode())
 
-def to_bytes(*args):
+def to_bytes(*objects):
     """
     Convert all args to bytes and return their concatenation.
     """
 
     data = b''
-    for arg in args:
+    for object in objects:
 
-        vtype = type(arg)
+        vtype = type(object)
         if vtype is bytes:
-            data += arg
+            data += object
 
         elif vtype is sage.rings.integer.Integer or vtype is int:
-            data += i2b(arg)
+            data += i2b(object)
 
         elif vtype is sage.schemes.elliptic_curves.ell_point.EllipticCurvePoint_finite_field:
-            data += ecp2b(arg)
+            data += ecp2b(object)
 
         elif vtype is str:
-            data += arg.encode()
+            data += object.encode()
 
         else:
             raise ValueError("Cannot convert value to bytes.")
