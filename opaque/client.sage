@@ -1,4 +1,5 @@
 from opaque.common import *
+from cryptography.exceptions import InvalidTag
 
 def register(send, recv):
 
@@ -20,11 +21,11 @@ def register(send, recv):
 
     # receive beta and P_s from server
     data = recv()
-    beta = j2ecp(data, E, 'beta')
-    P_s = j2ecp(data, E, 'P_s')
+    beta = j2ecp(data, 'beta')
+    P_s = j2ecp(data, 'P_s')
 
     # compute rw
-    rw = h(pw + ecp2b(beta * r.inverse_mod(n)))[:32]
+    rw = h(pw, beta * r.inverse_mod(n))[:32]
 
     # encrypt and authenticate p_u, P_u and P_s
     c_data = pickle.dumps((p_u, P_u, P_s))
@@ -51,36 +52,38 @@ def login(send, recv):
 
     # receive beta, X_s, c and A_s
     data = recv()
-    beta = j2ecp(data, E, 'beta')
-    X_s = j2ecp(data, E, 'X_s')
-    c = base64.b64decode(data['c'].encode())
-    A_s = base64.b64decode(data['A_s'].encode())
+    beta = j2ecp(data, 'beta')
+    X_s = j2ecp(data, 'X_s')
+    c = j2b(data['c'])
+    A_s = j2b(data['A_s'])
 
     # check beta belongs to the curve
     x, y = beta.xy()
     if not E.is_on_curve(x, y):
-        abort()
+        return (None, sid, ssid)
 
-    # compute rw and decrypt c
-    rw = h(pw + ecp2b(beta * r.inverse_mod(n)))[:32]
+    # compute rw and decrypt c, crop rw to 256 bits
+    rw = h(pw, beta * r.inverse_mod(n))[:32]
 
-    # If we can decrypt and authenticate c, it means that we encrypted it and
-    # therefore it's safe to deserialize it using pickle.
-    p_u, P_u, P_s = pickle.loads(auth_dec(rw, c))
+    try:
+        # decrypt and authentify c, extract p_u, P_u and P_s
+        p_u, P_u, P_s = pickle.loads(auth_dec(rw, c))
+    except InvalidTag:
+        return (None, sid, ssid)
 
     # compute ssid', K, SK
-    ssidp = h(sid + ssid + ecp2b(alpha))
+    ssidp = h(sid, ssid, alpha)
     K = key_ex_u(p_u, x_u, P_s, X_s, X_u, id_s, id_u, ssidp)
-    SK = f(K, b'\x00' + ssidp)
+    SK = f(K, 0, ssidp)
 
     # compute A_s and verify it equals the one received from the server
-    if A_s != f(K, b'\x01' + ssidp):
-        abort()
+    if A_s != f(K, 1, ssidp):
+        return (None, sid, ssid)
 
     # compute A_u
-    A_u = f(K, b'\x02' + ssidp)
+    A_u = f(K, 2, ssidp)
 
     # sending A_u to server
     send(A_u=A_u)
 
-    return SK
+    return (SK, sid, ssid)

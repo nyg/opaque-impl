@@ -23,9 +23,9 @@ This means that in both cases, we unpickle only data we trust (unless an attacke
 
 JSON is used to transmit data between the client and the server, and as mentioned in the Python doc, *unlike pickle, deserializing untrusted JSON does not in itself create an arbitrary code execution vulnerability*.
 
-### Limitation
+### Limitations
 
-This PoC can register only one user…
+This PoC can register only one user… And the H' function is not secure.
 
 ## Execution
 

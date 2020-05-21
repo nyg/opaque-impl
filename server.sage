@@ -1,7 +1,8 @@
-import socket
 import json
-import pickle
 import os
+import pickle
+import socket
+import traceback
 
 import opaque.server as opq_server
 from opaque.common import send_json, recv_json, sid
@@ -59,14 +60,18 @@ while True:
 
         elif data['op'] == 'login':
             load_db()
-            SK = opq_server.login(send, recv, db, data)
-            print(SK.hex())
+            SK, sid, ssid = opq_server.login(send, recv, db, data)
+            if SK is None:
+                raise ValueError()
+            else:
+                print(SK.hex())  # debug only
 
-        print('Ok')
-
-    except e:
-        print(e)
+    except:
+        #traceback.print_exc()  # debug only
         print('Error')
+
+    else:
+        print('Ok')
 
     finally:
         print('Closing connection.')

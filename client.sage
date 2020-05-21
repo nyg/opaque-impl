@@ -1,10 +1,11 @@
 import argparse
 import socket
+import traceback
 
 import opaque.client as opq_client
 from opaque.common import send_json, recv_json
 
-# Define available operations
+# Define register and login operations
 parser = argparse.ArgumentParser()
 parser.add_argument('-op', '--operation', required=True, metavar='OP', choices=['register', 'login'], help='...')
 args = parser.parse_args()
@@ -31,14 +32,18 @@ try:
         opq_client.register(send, recv)
 
     elif args.operation == 'login':
-        SK = opq_client.login(send, recv)
-        print(SK.hex())
+        SK, sid, ssid = opq_client.login(send, recv)
+        if SK is None:
+            raise ValueError()
+        else:
+            print(SK.hex())  # debug only
 
-    print('Ok')
-
-except e:
-    print(e)
+except:
+    #traceback.print_exc()  # debug only
     print('Error')
+
+else:
+    print('Ok')
 
 finally:
     print('Closing socket.')

@@ -10,7 +10,7 @@ def register(send, recv, db, data):
     P_s = p_s * G
 
     # compute beta
-    alpha = j2ecp(data, E, 'alpha')
+    alpha = j2ecp(data, 'alpha')
     beta = k_s * alpha
 
     # send v_u and beta to user
@@ -18,7 +18,7 @@ def register(send, recv, db, data):
 
     # receive c and P_u from user
     data = recv()
-    P_u = j2ecp(data, E, 'P_u')
+    P_u = j2ecp(data, 'P_u')
     c = data['c']
 
     return {
@@ -31,14 +31,14 @@ def register(send, recv, db, data):
 
 def login(send, recv, db, data):
 
-    alpha = j2ecp(data, E, 'alpha')
+    alpha = j2ecp(data, 'alpha')
 
     # check alpha belongs to the curve
     x, y = alpha.xy()
     if not E.is_on_curve(x, y):
-        abort()
+        return (None, sid, ssid)
 
-    X_u = j2ecp(data, E, 'X_u')
+    X_u = j2ecp(data, 'X_u')
 
     # choose x_s
     x_s = Integer(Fn.random_element())
@@ -55,19 +55,19 @@ def login(send, recv, db, data):
     X_s = x_s * G
 
     # compute ssid', K, SK and A_s
-    ssidp = h(sid + ssid + ecp2b(alpha))
+    ssidp = h(sid, ssid, alpha)
     K = key_ex_s(p_s, x_s, P_u, X_u, X_s, id_s, id_u, ssidp)
-    SK = f(K, b'\x00' + ssidp)
-    A_s = f(K, b'\x01' + ssidp)
+    SK = f(K, 0, ssidp)
+    A_s = f(K, 1, ssidp)
 
     # send beta, X_s, c and A_s
     send(beta=beta, X_s=X_s, c=c, A_s=A_s)
 
     data = recv()
-    A_u = base64.b64decode(data['A_u'].encode())
+    A_u = j2b(data['A_u'])
 
     # compute A_u and verify it equals the one received from the user
-    if A_u != f(K, b'\x02' + ssidp):
-        abort()
+    if A_u != f(K, 2, ssidp):
+        return (None, sid, ssid)
 
-    return SK
+    return (SK, sid, ssid)
