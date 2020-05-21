@@ -4,10 +4,10 @@
 from sage.all_cmdline import *   # import sage library
 
 _sage_const_2 = Integer(2); _sage_const_521 = Integer(521); _sage_const_1 = Integer(1); _sage_const_0x01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC = Integer(0x01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC); _sage_const_0x0051953EB9618E1C9A1F929A21A0B68540EEA2DA725B99B315F3B8B489918EF109E156193951EC7E937B1652C0BD3BB1BF073573DF883D2C34F1EF451FD46B503F00 = Integer(0x0051953EB9618E1C9A1F929A21A0B68540EEA2DA725B99B315F3B8B489918EF109E156193951EC7E937B1652C0BD3BB1BF073573DF883D2C34F1EF451FD46B503F00); _sage_const_0x00C6858E06B70404E9CD9E3ECB662395B4429C648139053FB521F828AF606B4D3DBAA14B5E77EFE75928FE1DC127A2FFA8DE3348B3C1856A429BF97E7E31C2E5BD66 = Integer(0x00C6858E06B70404E9CD9E3ECB662395B4429C648139053FB521F828AF606B4D3DBAA14B5E77EFE75928FE1DC127A2FFA8DE3348B3C1856A429BF97E7E31C2E5BD66); _sage_const_0x011839296A789A3BC0045C8A5FB42C7D1BD998F54449579B446817AFBD17273E662C97EE72995EF42640C550B9013FAD0761353C7086A272C24088BE94769FD16650 = Integer(0x011839296A789A3BC0045C8A5FB42C7D1BD998F54449579B446817AFBD17273E662C97EE72995EF42640C550B9013FAD0761353C7086A272C24088BE94769FD16650); _sage_const_0x01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFA51868783BF2F966B7FCC0148F709A5D03BB5C9B8899C47AEBB6FB71E91386409 = Integer(0x01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFA51868783BF2F966B7FCC0148F709A5D03BB5C9B8899C47AEBB6FB71E91386409); _sage_const_7 = Integer(7); _sage_const_8 = Integer(8); _sage_const_1024 = Integer(1024); _sage_const_16 = Integer(16); _sage_const_0 = Integer(0); _sage_const_12 = Integer(12); _sage_const_0x00 = Integer(0x00)
-import os
 import pickle
-import hashlib
+import base64
 import json
+import hashlib
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.backends import default_backend
@@ -71,10 +71,10 @@ def j2ecp(j, ec, name):
 #
 # Send, receive helper functions.
 
-def recv_json(connection):
+def recv_json(sock):
     data = b''
     while True:
-        d = connection.recv(_sage_const_1024 )
+        d = sock.recv(_sage_const_1024 )
         if not d:
             continue
         try:
@@ -83,7 +83,33 @@ def recv_json(connection):
         except:
             None
 
-def send(sock, dict):
+#def send_json(sock, data):
+    #sock.sendall(json.dumps(data).encode())
+
+def send_json(sock, **kwargs):
+
+    dict = {}
+
+    for name, value in kwargs.items():
+
+        vtype = type(value)
+        if vtype is bytes:
+            dict[name] = base64.b64encode(value).decode()
+
+        elif vtype is sage.schemes.elliptic_curves.ell_point.EllipticCurvePoint_finite_field:
+            dict.update(ecp2j(value, name))
+
+        elif vtype is sage.rings.integer.Integer:
+            # we suppose that all Integer belong to F_n
+            dict[name] = int(value)
+
+        elif vtype is str or vtype is int or vtype is float:
+            dict[name] = value
+
+        else:
+            raise ValueError("Cannot add value to JSON.")
+
+    #print(dict)
     sock.sendall(json.dumps(dict).encode())
 
 #

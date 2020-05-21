@@ -1,7 +1,7 @@
-import os
 import pickle
-import hashlib
+import base64
 import json
+import hashlib
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.backends import default_backend
@@ -65,10 +65,10 @@ def j2ecp(j, ec, name):
 #
 # Send, receive helper functions.
 
-def recv_json(connection):
+def recv_json(sock):
     data = b''
     while True:
-        d = connection.recv(1024)
+        d = sock.recv(1024)
         if not d:
             continue
         try:
@@ -77,7 +77,33 @@ def recv_json(connection):
         except:
             None
 
-def send(sock, dict):
+#def send_json(sock, data):
+    #sock.sendall(json.dumps(data).encode())
+
+def send_json(sock, **kwargs):
+
+    dict = {}
+
+    for name, value in kwargs.items():
+
+        vtype = type(value)
+        if vtype is bytes:
+            dict[name] = base64.b64encode(value).decode()
+
+        elif vtype is sage.schemes.elliptic_curves.ell_point.EllipticCurvePoint_finite_field:
+            dict.update(ecp2j(value, name))
+
+        elif vtype is sage.rings.integer.Integer:
+            # we suppose that all Integer belong to F_n
+            dict[name] = int(value)
+
+        elif vtype is str or vtype is int or vtype is float:
+            dict[name] = value
+
+        else:
+            raise ValueError("Cannot add value to JSON.")
+
+    #print(dict)
     sock.sendall(json.dumps(dict).encode())
 
 #
