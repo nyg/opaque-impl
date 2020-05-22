@@ -3,9 +3,10 @@ import base64
 import json
 import hashlib
 
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, hmac
+from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 #
 # Hardcoded values to simplify this current implementation.
@@ -49,6 +50,22 @@ def hp(m):
     The H' function. Insecure implementation.
     """
     return int.from_bytes(h(m), byteorder=sys.byteorder) * G
+
+def pbkdf(pwd):
+    """
+    PBKDF function (Scrypt). According to the specs, these parameters can be
+    public, so we hardcode them here.
+    """
+
+    # as mentionned in the RFC
+    salt = b'\x00' * 16
+
+    n = 2 ** 14  # 2 ** 20
+    r = 8
+    p = 1
+
+    kdf = Scrypt(salt=salt, length=32, n=n, r=r, p=p, backend=default_backend())
+    return kdf.derive(pwd)
 
 def auth_enc(key, message):
     """

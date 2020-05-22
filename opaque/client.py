@@ -4,13 +4,15 @@
 from sage.all_cmdline import *   # import sage library
 
 _sage_const_32 = Integer(32); _sage_const_0 = Integer(0); _sage_const_1 = Integer(1); _sage_const_2 = Integer(2)
+from getpass import getpass
 from opaque.common import *
 from cryptography.exceptions import InvalidTag
 
+
 def register(send, recv):
 
-    # TODO: ask user for pwd
-    pw = b'pwd123'
+    #pw = b'pwd123'
+    pw = getpass("Password:")
 
     # choose a private and a public key
     p_u = Integer(Fn.random_element())
@@ -30,8 +32,11 @@ def register(send, recv):
     beta = j2ecp(data, 'beta')
     P_s = j2ecp(data, 'P_s')
 
-    # compute rw
+    # compute rw and crop it to 256 bits
     rw = h(pw, beta * r.inverse_mod(n))[:_sage_const_32 ]
+
+    # harden rw using a PBKDF (Scrypt)
+    rw = pbkdf(rw)
 
     # encrypt and authenticate p_u, P_u and P_s
     c_data = pickle.dumps((p_u, P_u, P_s))
@@ -40,10 +45,11 @@ def register(send, recv):
     # send c and P_u to the server
     send(c=c, P_u=P_u)
 
+
 def login(send, recv):
 
-    # TODO: ask user for pwd
-    pw = b'pwd123'
+    #pw = b'pwd123'
+    pw = getpass("Password:")
 
     # choose random r and x_u
     r = Integer(Fn.random_element())
@@ -67,8 +73,11 @@ def login(send, recv):
     if not on_curve(beta):
         return (None, sid, ssid)
 
-    # compute rw and decrypt c, crop rw to 256 bits
+    # compute rw and crop it to 256 bits
     rw = h(pw, beta * r.inverse_mod(n))[:_sage_const_32 ]
+
+    # harden rw using a PBKDF (Scrypt)
+    rw = pbkdf(rw)
 
     try:
         # decrypt and authentify c, extract p_u, P_u and P_s

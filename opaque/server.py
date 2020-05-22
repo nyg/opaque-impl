@@ -25,14 +25,13 @@ def register(send, recv, db, data):
     # receive c and P_u from user
     data = recv()
     P_u = j2ecp(data, 'P_u')
-    c = data['c']
 
     return {
         'k_s': k_s,
         'p_s': p_s,
         'P_s': P_s,
         'P_u': P_u,
-        'c' : c
+        'c' : data['c']
     }
 
 def login(send, recv, db, data):
