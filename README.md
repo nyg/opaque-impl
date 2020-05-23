@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The following software is an PoC implementation of the OPAQUE protocol. This implementation uses ECDH for the OPRF. For more information on the primitives used and the protocol description, see [pdf/README.pdf](pdf/README.pdf). This PoC is written using SageMath and the [pyca/cryptography](https://github.com/pyca/cryptography) library.
+The following software is an PoC implementation of the OPAQUE protocol. This implementation uses ECDH for the OPRF. For more information on the primitives used and the protocol description, see [pdf/README.pdf](pdf/README.pdf). This PoC is written using [SageMath](https://www.sagemath.org) and the [pyca/cryptography](https://github.com/pyca/cryptography) library.
 
 ## Description
 
@@ -17,7 +17,7 @@ OPAQUE-related code is located in files inside the `opaque` folder. The Sage scr
 1. in the client, for the input of the `AuthEnc` function and
 2. in the server, to serialize the database to a file.
 
-This means that in both cases, we unpickle only data we trust (unless an attacker managed to get an access to the server or to the `rw` key…).
+This means that in both cases, we unpickle only data we trust (unless an attacker managed to get access to the server or to the `rw` key…).
 
 ### JSON
 
@@ -25,7 +25,10 @@ JSON is used to transmit data between the client and the server, and as mentione
 
 ### Limitations
 
-This PoC can register only one user… And the H' function is not secure.
+1. This PoC can register only one user.
+2. The H' function is not secure.
+3. The sensible cryptographic material is not erase from the memory.
+4. When the client quits with an error, the corresponding socket connection on the server must be killed manually (^C).
 
 ## Execution
 
