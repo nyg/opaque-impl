@@ -7,15 +7,19 @@ import traceback
 import opaque.server as opq_server
 from opaque.common import send_json, recv_json, sid
 
-# High-tech database
+# High-tech database.
 db_path = 'db.txt'
 db = None
 
+# Create file if it does not exist.
 if not os.path.exists(db_path):
     with open(db_path, 'w'): pass
 
 
 def load_db():
+    """
+    Load the database into the db variable.
+    """
     with open(db_path, 'rb') as file:
         try:
             global db
@@ -24,8 +28,10 @@ def load_db():
             print('Warning: could not read db, file may be empty…')
             db = {}
 
-
 def dump_db():
+    """
+    Serialize the db variable into the database file.
+    """
     with open(db_path, 'wb') as file:
         pickle.dump(db, file)
 
@@ -50,24 +56,26 @@ while True:
         return recv_json(connection)
 
     try:
-        print('Connection from {}…'.format(client_address))
+        print('Connection from {}… (^C to kill it)'.format(client_address))
         data = recv()
 
+        # Client wants to register.
         if (data['op'] == 'register'):
             load_db()
-            db[sid] = opq_server.register(send, recv, db, data)
+            db[sid] = opq_server.register(send, recv, data)
             dump_db()
 
+        # Client wants to login.
         elif data['op'] == 'login':
             load_db()
-            SK, sid, ssid = opq_server.login(send, recv, db, data)
+            SK, sid, ssid = opq_server.login(send, recv, db[sid], data)
             if SK is None:
                 raise ValueError()
             else:
                 print(SK.hex())  # debug only
 
     except:
-        traceback.print_exc()  # debug only
+        #traceback.print_exc()  # debug only
         print('Error')
 
     else:

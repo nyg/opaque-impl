@@ -3,99 +3,93 @@ from opaque.common import *
 from cryptography.exceptions import InvalidTag
 
 
-def register(send, recv):
+def register(send, recv, pw):
+    """
+    Register the client's password with the server.
 
-    #pw = b'pwd123'
-    pw = getpass("Password:")
+    :param send: a function used to send data to the server
+    :param recv: a function used to receive data from the server
+    :param pw  : the password to register with
+    """
 
-    # choose a private and a public key
-    p_u = Integer(Fn.random_element())
-    P_u = p_u * G
+    # Choose a private and public key pair (p_u, P_u).
+    p_u, P_u = gen_key()
 
-    # choose random r
+    # Choose a random r and compute alpha.
     r = Integer(Fn.random_element())
+    alpha = r * hp(pw)
 
-    # compute alpha
-    alpha = hp(pw) * r
-
-    # send alpha to server
+    # Send alpha to the server.
     send(op='register', alpha=alpha)
 
-    # receive beta and P_s from server
+    # Receive beta and P_s from the server.
     data = recv()
     beta = j2ecp(data, 'beta')
     P_s = j2ecp(data, 'P_s')
 
-    # compute rw and crop it to 256 bits
-    rw = h(pw, beta * r.inverse_mod(n))[:32]
+    # Compute rw and harden it using a PBKDF.
+    rw = pbkdf(h(pw, beta * r.inverse_mod(n)))
 
-    # harden rw using a PBKDF (Scrypt)
-    rw = pbkdf(rw)
+    # Encrypt and authenticate p_u, P_u and P_s.
+    c = auth_enc(rw, pickle.dumps((p_u, P_u, P_s)))
 
-    # encrypt and authenticate p_u, P_u and P_s
-    c_data = pickle.dumps((p_u, P_u, P_s))
-    c = auth_enc(rw, c_data)
-
-    # send c and P_u to the server
+    # Send c and P_u to the server.
     send(c=c, P_u=P_u)
 
 
-def login(send, recv):
+def login(send, recv, pw):
+    """
+    Log in the client with the server.
 
-    #pw = b'pwd123'
-    pw = getpass("Password:")
+    :param send: a function used to send data to the server
+    :param recv: a function used to receive data from the server
+    :param pw  : the password to log in with
+    :returns   : a tuple (X, sid, ssid) where X is the symmetric key in case of
+                 success, or None in case of failure.
+    """
 
-    # choose random r and x_u
+    # Choose a private and public key pair (x_u, X_u).
+    x_u, X_u = gen_key()
+
+    # Choose a random r and compute alpha.
     r = Integer(Fn.random_element())
-    x_u = Integer(Fn.random_element())
+    alpha = r * hp(pw)
 
-    # compute alpha and X_u
-    alpha = hp(pw) * r
-    X_u = x_u * G
-
-    # sending alpha and X_u to the server
+    # Send alpha and X_u to the server.
     send(op='login', alpha=alpha, X_u=X_u)
 
-    # receive beta, X_s, c and A_s
+    # Receive beta, X_s, c and A_s.
     data = recv()
     beta = j2ecp(data, 'beta')
     X_s = j2ecp(data, 'X_s')
     c = j2b(data['c'])
     A_s = j2b(data['A_s'])
 
-    # check beta belongs to the curve
-    if not on_curve(beta):
-        return (None, sid, ssid)
+    # Compute rw and harden it using a PBKDF.
+    rw = pbkdf(h(pw, beta * r.inverse_mod(n)))
 
-    # compute rw and crop it to 256 bits
-    rw = h(pw, beta * r.inverse_mod(n))[:32]
-
-    # harden rw using a PBKDF (Scrypt)
-    rw = pbkdf(rw)
-
+    # Decrypt and authentify c, extract p_u, P_u and P_s.
     try:
-        # decrypt and authentify c, extract p_u, P_u and P_s
         p_u, P_u, P_s = pickle.loads(auth_dec(rw, c))
     except InvalidTag:
         return (None, sid, ssid)
 
-    # check X_u, P_u, X_s and P_s are all on the curve
-    if not on_curve(X_u, P_u, X_s, P_s):
+    # Check beta, X_s and P_s are on the curve. P_u should be on the curve as it
+    # was computed by the client.
+    if not on_curve(beta, X_s, P_s):
         return (None, sid, ssid)
 
-    # compute ssid', K, SK
+    # Compute ssid', K and SK.
     ssidp = h(sid, ssid, alpha)
     K = key_ex_u(p_u, x_u, P_s, X_s, X_u, id_s, id_u, ssidp)
     SK = f(K, 0, ssidp)
 
-    # compute A_s and verify it equals the one received from the server
+    # Compute A_s and verify it equals the one received from the server.
     if A_s != f(K, 1, ssidp):
         return (None, sid, ssid)
 
-    # compute A_u
+    # Compute A_u and send it to the server.
     A_u = f(K, 2, ssidp)
-
-    # sending A_u to server
     send(A_u=A_u)
 
     return (SK, sid, ssid)

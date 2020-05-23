@@ -5,7 +5,7 @@ import traceback
 import opaque.client as opq_client
 from opaque.common import send_json, recv_json
 
-# Define register and login operations
+# Define register and login operations.
 parser = argparse.ArgumentParser()
 parser.add_argument('-op', '--operation', required=True, metavar='OP', choices=['register', 'login'], help='...')
 args = parser.parse_args()
@@ -28,18 +28,20 @@ try:
     def recv():
         return recv_json(sock)
 
+    pw = getpass("Password:")
+
     if args.operation == 'register':
-        opq_client.register(send, recv)
+        opq_client.register(send, recv, pw)
 
     elif args.operation == 'login':
-        SK, sid, ssid = opq_client.login(send, recv)
+        SK, sid, ssid = opq_client.login(send, recv, pw)
         if SK is None:
             raise ValueError()
         else:
             print(SK.hex())  # debug only
 
 except:
-    traceback.print_exc()  # debug only
+    #traceback.print_exc()  # debug only
     print('Error')
 
 else:

@@ -39,6 +39,13 @@ if not (n * G).is_zero():
 #
 # OPAQUE functions.
 
+def gen_key():
+    """
+    Generate a random private and public key pair.
+    """
+    prv = Integer(Fn.random_element())
+    return (prv, prv * G)
+
 def h(*data):
     """
     The H function (SHA-512).
