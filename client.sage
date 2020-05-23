@@ -1,8 +1,9 @@
 import argparse
 import socket
 import traceback
-
 import opaque.client as opq_client
+
+from getpass import getpass
 from opaque.common import send_json, recv_json
 
 # Define register and login operations.
@@ -37,8 +38,8 @@ try:
         SK, sid, ssid = opq_client.login(send, recv, pw)
         if SK is None:
             raise ValueError()
-        else:
-            print(SK.hex())  # debug only
+        #else:
+        #    print(SK.hex())  # debug only
 
 except:
     #traceback.print_exc()  # debug only

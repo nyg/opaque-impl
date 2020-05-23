@@ -4,7 +4,6 @@
 from sage.all_cmdline import *   # import sage library
 
 _sage_const_0 = Integer(0); _sage_const_1 = Integer(1); _sage_const_2 = Integer(2)
-from getpass import getpass
 from opaque.common import *
 from cryptography.exceptions import InvalidTag
 

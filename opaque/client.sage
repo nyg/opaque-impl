@@ -1,4 +1,3 @@
-from getpass import getpass
 from opaque.common import *
 from cryptography.exceptions import InvalidTag
 
